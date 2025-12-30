@@ -156,7 +156,7 @@ write_files:
                       continue
                   }
 
-                  ip, err := a.getPrivateIPFromVM(vm)
+                  ip, err := a.getPublicIPFromVM(vm)
                   if err != nil {
                       log.Printf("WARNING: Failed to get IP for VM %s: %v", *vm.Name, err)
                       continue
@@ -244,6 +244,65 @@ write_files:
           }
 
           return *ipConfig.Properties.PrivateIPAddress, nil
+      }
+
+      func (a *AzureDiscovery) getPublicIPFromVM(vm *armcompute.VirtualMachine) (string, error) {
+          if vm.Properties == nil || vm.Properties.NetworkProfile == nil {
+              return "", fmt.Errorf("no network profile")
+          }
+
+          nics := vm.Properties.NetworkProfile.NetworkInterfaces
+          if len(nics) == 0 {
+              return "", fmt.Errorf("no network interfaces")
+          }
+
+          nicID := *nics[0].ID
+          parts := strings.Split(nicID, "/")
+          if len(parts) < 9 {
+              return "", fmt.Errorf("invalid NIC ID format")
+          }
+
+          nicRG := parts[4]
+          nicName := parts[8]
+
+          // Get NIC details
+          nic, err := a.nicClient.Get(a.ctx, nicRG, nicName, nil)
+          if err != nil {
+              return "", fmt.Errorf("failed to get NIC: %v", err)
+          }
+
+          if nic.Properties == nil || nic.Properties.IPConfigurations == nil || len(nic.Properties.IPConfigurations) == 0 {
+              return "", fmt.Errorf("no IP configurations")
+          }
+
+          ipConfig := nic.Properties.IPConfigurations[0]
+
+          // Check if public IP is attached
+          if ipConfig.Properties == nil || ipConfig.Properties.PublicIPAddress == nil {
+              return "", fmt.Errorf("no public IP address attached to NIC")
+          }
+
+          // Get public IP ID
+          publicIPID := *ipConfig.Properties.PublicIPAddress.ID
+          publicIPParts := strings.Split(publicIPID, "/")
+          if len(publicIPParts) < 9 {
+              return "", fmt.Errorf("invalid public IP ID format")
+          }
+
+          publicIPRG := publicIPParts[4]
+          publicIPName := publicIPParts[8]
+
+          // Get public IP details
+          publicIP, err := a.publicIPClient.Get(a.ctx, publicIPRG, publicIPName, nil)
+          if err != nil {
+              return "", fmt.Errorf("failed to get public IP: %v", err)
+          }
+
+          if publicIP.Properties == nil || publicIP.Properties.IPAddress == nil {
+              return "", fmt.Errorf("public IP address is nil")
+          }
+
+          return *publicIP.Properties.IPAddress, nil
       }
 
       func makeCluster(clusterName string) *cluster.Cluster {
