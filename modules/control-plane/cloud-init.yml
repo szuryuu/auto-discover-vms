@@ -1,24 +1,18 @@
 #cloud-config
 write_files:
-  - path: /etc/systemd/system/control-plane.service
+  - path: /opt/control-plane/config.yaml
     content: |
-      [Unit]
-      Description=Envoy Control Plane
-      After=network.target
+      discovery:
+        # Discover VMs by app-name tag
+        # app_name: "backend"
 
-      [Service]
-      Type=simple
-      User=root
-      WorkingDirectory=/opt/control-plane
-      ExecStart=/opt/control-plane/control-plane
-      Restart=always
-      RestartSec=10
+        # Alternative 1
+        # name_pattern: "horizontal-scale-envoyproxy-backend-*"
 
-      StandardOutput=journal
-      StandardError=journal
-
-      [Install]
-      WantedBy=multi-user.target
+        # Alternative 2
+        # vm_names:
+          - "auto-discover-vms-app-1"
+          - "auto-discover-vms-app-2"
 
   - path: /opt/control-plane/main.go
     content: |
@@ -29,8 +23,11 @@ write_files:
           "fmt"
           "log"
           "net"
+          "os"
+          "strings"
           "time"
 
+          "gopkg.in/yaml.v3"
           "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
           "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5"
           "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v5"
@@ -40,12 +37,12 @@ write_files:
           listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
           route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
           router "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
+          hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
           clusterservice "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
           discoverygrpc "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
           endpointservice "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
           listenerservice "github.com/envoyproxy/go-control-plane/envoy/service/listener/v3"
           routeservice "github.com/envoyproxy/go-control-plane/envoy/service/route/v3"
-          hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
           "github.com/envoyproxy/go-control-plane/pkg/cache/types"
           "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
           "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
@@ -60,23 +57,45 @@ write_files:
           grpcPort        = 18000
           subscriptionID  = "${subscription_id}"
           resourceGroup   = "${resource_group_name}"
-          vmssName        = "${vmss_name}"
           pollingInterval = 30 * time.Second
       )
 
+      type Config struct {
+          Discovery struct {
+              AppName     string   `yaml:"app_name"`
+              NamePattern string   `yaml:"name_pattern"`
+              VMNames     []string `yaml:"vm_names"`
+          } `yaml:"discovery"`
+      }
+
       type AzureDiscovery struct {
-          vmClient  *armcompute.VirtualMachineScaleSetVMsClient
+          vmClient  *armcompute.VirtualMachinesClient
           nicClient *armnetwork.InterfacesClient
+          config    Config
           ctx       context.Context
       }
 
-      func NewAzureDiscovery(ctx context.Context) (*AzureDiscovery, error) {
+      func loadConfig(path string) (*Config, error) {
+          data, err := os.ReadFile(path)
+          if err != nil {
+              return nil, err
+          }
+
+          var config Config
+          if err := yaml.Unmarshal(data, &config); err != nil {
+              return nil, err
+          }
+
+          return &config, nil
+      }
+
+      func NewAzureDiscovery(ctx context.Context, config Config) (*AzureDiscovery, error) {
           cred, err := azidentity.NewDefaultAzureCredential(nil)
           if err != nil {
               return nil, fmt.Errorf("failed to get credentials: %v", err)
           }
 
-          vmClient, err := armcompute.NewVirtualMachineScaleSetVMsClient(subscriptionID, cred, nil)
+          vmClient, err := armcompute.NewVirtualMachinesClient(subscriptionID, cred, nil)
           if err != nil {
               return nil, fmt.Errorf("failed to create VM client: %v", err)
           }
@@ -89,39 +108,115 @@ write_files:
           return &AzureDiscovery{
               vmClient:  vmClient,
               nicClient: nicClient,
+              config:    config,
               ctx:       ctx,
           }, nil
       }
 
-      func (a *AzureDiscovery) GetVMSSInstances() ([]string, error) {
-          nicPager := a.nicClient.NewListVirtualMachineScaleSetNetworkInterfacesPager(
-              resourceGroup,
-              vmssName,
-              nil,
-          )
+      func (a *AzureDiscovery) GetVMInstances() ([]string, error) {
+          pager := a.vmClient.NewListPager(resourceGroup, nil)
 
           var ips []string
 
-          for nicPager.More() {
-              page, err := nicPager.NextPage(a.ctx)
+          for pager.More() {
+              page, err := pager.NextPage(a.ctx)
               if err != nil {
-                  return nil, fmt.Errorf("failed to list network interfaces: %v", err)
+                  return nil, fmt.Errorf("failed to list VMs: %v", err)
               }
 
-              for _, nic := range page.Value {
-                  if nic.Properties == nil || nic.Properties.IPConfigurations == nil {
+              for _, vm := range page.Value {
+                  if !a.matchesCriteria(vm) {
                       continue
                   }
 
-                  for _, ipConfig := range nic.Properties.IPConfigurations {
-                      if ipConfig.Properties != nil && ipConfig.Properties.PrivateIPAddress != nil {
-                          ips = append(ips, *ipConfig.Properties.PrivateIPAddress)
-                      }
+                  ip, err := a.getPrivateIPFromVM(vm)
+                  if err != nil {
+                      log.Printf("WARNING: Failed to get IP for VM %s: %v", *vm.Name, err)
+                      continue
                   }
+
+                  log.Printf("INFO: Discovered VM %s with IP %s", *vm.Name, ip)
+                  ips = append(ips, ip)
               }
           }
 
           return ips, nil
+      }
+
+      func (a *AzureDiscovery) matchesCriteria(vm *armcompute.VirtualMachine) bool {
+          if vm.Name == nil {
+              return false
+          }
+
+          vmName := *vm.Name
+
+          // Option 1: Filter by exact VM names
+          if len(a.config.Discovery.VMNames) > 0 {
+              for _, name := range a.config.Discovery.VMNames {
+                  if vmName == name {
+                      return true
+                  }
+              }
+              return false
+          }
+
+          // Option 2: Filter by name pattern
+          if a.config.Discovery.NamePattern != "" {
+              pattern := strings.TrimSuffix(a.config.Discovery.NamePattern, "*")
+              if !strings.HasPrefix(vmName, pattern) {
+                  return false
+              }
+          }
+
+          // Option 3: Filter by app-name tag (default)
+          if a.config.Discovery.AppName != "" {
+              if vm.Tags == nil {
+                  return false
+              }
+
+              appNameTag, exists := vm.Tags["app-name"]
+              if !exists || appNameTag == nil || *appNameTag != a.config.Discovery.AppName {
+                  return false
+              }
+          }
+
+          return true
+      }
+
+      func (a *AzureDiscovery) getPrivateIPFromVM(vm *armcompute.VirtualMachine) (string, error) {
+          if vm.Properties == nil || vm.Properties.NetworkProfile == nil {
+              return "", fmt.Errorf("no network profile")
+          }
+
+          nics := vm.Properties.NetworkProfile.NetworkInterfaces
+          if len(nics) == 0 {
+              return "", fmt.Errorf("no network interfaces")
+          }
+
+          nicID := *nics[0].ID
+          parts := strings.Split(nicID, "/")
+          if len(parts) < 9 {
+              return "", fmt.Errorf("invalid NIC ID format")
+          }
+
+          nicRG := parts[4]
+          nicName := parts[8]
+
+          nic, err := a.nicClient.Get(a.ctx, nicRG, nicName, nil)
+          if err != nil {
+              return "", fmt.Errorf("failed to get NIC: %v", err)
+          }
+
+          if nic.Properties == nil || nic.Properties.IPConfigurations == nil || len(nic.Properties.IPConfigurations) == 0 {
+              return "", fmt.Errorf("no IP configurations")
+          }
+
+          ipConfig := nic.Properties.IPConfigurations[0]
+          if ipConfig.Properties == nil || ipConfig.Properties.PrivateIPAddress == nil {
+              return "", fmt.Errorf("no private IP address")
+          }
+
+          return *ipConfig.Properties.PrivateIPAddress, nil
       }
 
       func makeCluster(clusterName string) *cluster.Cluster {
@@ -196,10 +291,7 @@ write_files:
       }
 
       func makeHTTPListener(listenerName, routeName string) *listener.Listener {
-          routerConfig, err := anypb.New(&router.Router{})
-          if err != nil {
-              panic(err)
-          }
+          routerConfig, _ := anypb.New(&router.Router{})
 
           manager := &hcm.HttpConnectionManager{
               StatPrefix: "ingress_http",
@@ -222,10 +314,7 @@ write_files:
               }},
           }
 
-          pbst, err := anypb.New(manager)
-          if err != nil {
-              panic(err)
-          }
+          pbst, _ := anypb.New(manager)
 
           return &listener.Listener{
               Name: listenerName,
@@ -266,9 +355,21 @@ write_files:
       func main() {
           ctx := context.Background()
 
+          log.Println("Loading configuration...")
+          config, err := loadConfig("/opt/control-plane/config.yaml")
+          if err != nil {
+              log.Fatalf("Failed to load config: %v", err)
+          }
+
+          log.Printf("Discovery config: AppName=%s, NamePattern=%s, VMNames=%v",
+              config.Discovery.AppName,
+              config.Discovery.NamePattern,
+              config.Discovery.VMNames,
+          )
+
           log.Println("Starting Envoy control plane...")
 
-          discovery, err := NewAzureDiscovery(ctx)
+          discovery, err := NewAzureDiscovery(ctx, *config)
           if err != nil {
               log.Fatalf("Failed to create Azure discovery: %v", err)
           }
@@ -279,11 +380,11 @@ write_files:
           go func() {
               version := 1
               for {
-                  log.Printf("Polling Azure for VMSS instances (attempt %d)...", version)
+                  log.Printf("Polling Azure for VMs (attempt %d)...", version)
 
-                  ips, err := discovery.GetVMSSInstances()
+                  ips, err := discovery.GetVMInstances()
                   if err != nil {
-                      log.Printf("ERROR: Failed to get VMSS instances: %v", err)
+                      log.Printf("ERROR: Failed to get VM instances: %v", err)
                       time.Sleep(pollingInterval)
                       continue
                   }
@@ -349,6 +450,7 @@ write_files:
           github.com/envoyproxy/go-control-plane v0.12.0
           google.golang.org/grpc v1.60.1
           google.golang.org/protobuf v1.32.0
+          gopkg.in/yaml.v3 v3.0.1
       )
 
 runcmd:
@@ -363,7 +465,6 @@ runcmd:
     export PATH=/usr/local/go/bin:$PATH
 
     cd /opt/control-plane
-    go version
     go mod tidy
     go build -o control-plane main.go
 

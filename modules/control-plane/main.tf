@@ -28,7 +28,6 @@ resource "azurerm_linux_virtual_machine" "control_plane" {
   custom_data = base64encode(templatefile("${path.module}/cloud-init.yml", {
     subscription_id     = var.subscription_id
     resource_group_name = var.resource_group_name
-    vmss_name           = var.vmss_name
   }))
 
   identity {

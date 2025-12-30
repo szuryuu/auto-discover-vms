@@ -1,3 +1,3 @@
 output "vm_names" {
-  value = azurerm_virtual_machine.app_vm[*].name
+  value = azurerm_linux_virtual_machine.app_vm[*].name
 }

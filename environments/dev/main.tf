@@ -42,21 +42,6 @@ module "network" {
   app_name         = var.apps
 }
 
-# module "backend-vmss" {
-#   source              = "../../modules/backend-vmss"
-#   resource_group_name = data.azurerm_resource_group.main.name
-#   location            = data.azurerm_resource_group.main.location
-
-#   # Configuration
-#   project_name       = var.project_name
-#   environment        = var.environment
-#   ssh_public_key     = data.azurerm_key_vault_secret.ssh.value
-#   subnet_id          = module.network.subnet_id
-#   lb_backend_pool_id = module.network.backend_pool_id
-
-#   depends_on = [module.network]
-# }
-
 module "backend-vms" {
   source              = "../../modules/backend-vms"
   resource_group_name = data.azurerm_resource_group.main.name
@@ -87,7 +72,7 @@ module "control-plane" {
   network_interface_ids = [module.network.control_plane_nic_id]
   ssh_public_key        = data.azurerm_key_vault_secret.ssh.value
   subscription_id       = var.subscription_id
-  vmss_name             = module.backend-vmss.vm_name
+  # vmss_name             = module.backend-vmss.vm_name
 
   depends_on = [module.network, module.backend-vms]
 }
