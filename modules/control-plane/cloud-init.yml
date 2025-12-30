@@ -1,5 +1,25 @@
 #cloud-config
 write_files:
+  - path: /etc/systemd/system/control-plane.service
+    content: |
+      [Unit]
+      Description=Envoy Control Plane
+      After=network.target
+
+      [Service]
+      Type=simple
+      User=root
+      WorkingDirectory=/opt/control-plane
+      ExecStart=/opt/control-plane/control-plane
+      Restart=always
+      RestartSec=10
+
+      StandardOutput=journal
+      StandardError=journal
+
+      [Install]
+      WantedBy=multi-user.target
+
   - path: /opt/control-plane/config.yaml
     content: |
       discovery:
