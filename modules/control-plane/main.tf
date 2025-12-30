@@ -41,7 +41,7 @@ resource "azurerm_linux_virtual_machine" "control_plane" {
 }
 
 resource "azurerm_role_assignment" "control_plane_reader" {
-  scope = var.resource_group_id
+  scope                = var.resource_group_id
   role_definition_name = "Reader"
-  principal_id = azurerm_linux_virtual_machine.control_plane.identity[0].principal_id
+  principal_id         = azurerm_linux_virtual_machine.control_plane.identity[0].principal_id
 }

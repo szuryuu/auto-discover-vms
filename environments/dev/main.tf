@@ -39,7 +39,7 @@ module "network" {
   address_prefixes = var.address_prefixes
   # dns_record       = module.backend-vmss.dns_record
   vm_count = length(var.apps)
-  app_name         = var.apps
+  app_name = var.apps
 }
 
 module "backend-vms" {
@@ -54,7 +54,7 @@ module "backend-vms" {
   network_interface_ids = module.network.app_nic_ids
   subnet_id             = module.network.subnet_id
   vm_count              = 2
-  app_name  = var.apps
+  app_name              = var.apps
 
   depends_on = [module.network]
 }

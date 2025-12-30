@@ -23,20 +23,15 @@ output "vm_control_plane_private_ip" {
   value = module.control-plane.private_ip
 }
 
-# Network
-output "envoy_nic_id" {
-  value = module.network.envoy_nic_id
+output "vm_app_public_ip" {
+  value = module.backend-vms.public_ips
 }
 
-# output "monitor_nic_id" {
-#   value = module.network.monitor_nic_id
-# }
+output "vm_app_private_ip" {
+  value = module.backend-vms.private_ips
+}
 
 # Environment
-# output "vm_name" {
-#   value = module.backend-vmss.vm_name
-# }
-
 output "environment" {
   value = var.environment
 }

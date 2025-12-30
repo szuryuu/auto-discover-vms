@@ -91,6 +91,7 @@ write_files:
       type AzureDiscovery struct {
           vmClient  *armcompute.VirtualMachinesClient
           nicClient *armnetwork.InterfacesClient
+          publicIPClient *armnetwork.PublicIPAddressesClient
           config    Config
           ctx       context.Context
       }
@@ -125,9 +126,15 @@ write_files:
               return nil, fmt.Errorf("failed to create NIC client: %v", err)
           }
 
+          publicIPClient, err := armnetwork.NewPublicIPAddressesClient(subscriptionID, cred, nil)
+          if err != nil {
+              return nil, fmt.Errorf("failed to create Public IP client: %v", err)
+          }
+
           return &AzureDiscovery{
               vmClient:  vmClient,
               nicClient: nicClient,
+              publicIPClient: publicIPClient,
               config:    config,
               ctx:       ctx,
           }, nil

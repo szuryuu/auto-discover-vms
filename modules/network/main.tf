@@ -35,8 +35,8 @@ resource "azurerm_public_ip" "control_plane_pip" {
 }
 
 resource "azurerm_public_ip" "app_pip" {
-  count = var.vm_count
-  name = "${var.project_name}-${var.environment}-app-${count.index}-pip"
+  count               = var.vm_count
+  name                = "${var.project_name}-${var.environment}-app-${count.index}-pip"
   resource_group_name = var.resource_group_name
   location            = var.location
   allocation_method   = "Static"
