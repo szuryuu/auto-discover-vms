@@ -38,19 +38,37 @@ module "network" {
   address_space    = var.address_space
   address_prefixes = var.address_prefixes
   # dns_record       = module.backend-vmss.dns_record
+  vm_count = length(var.apps)
+  app_name         = var.apps
 }
 
-module "backend-vmss" {
-  source              = "../../modules/backend-vmss"
+# module "backend-vmss" {
+#   source              = "../../modules/backend-vmss"
+#   resource_group_name = data.azurerm_resource_group.main.name
+#   location            = data.azurerm_resource_group.main.location
+
+#   # Configuration
+#   project_name       = var.project_name
+#   environment        = var.environment
+#   ssh_public_key     = data.azurerm_key_vault_secret.ssh.value
+#   subnet_id          = module.network.subnet_id
+#   lb_backend_pool_id = module.network.backend_pool_id
+
+#   depends_on = [module.network]
+# }
+
+module "backend-vms" {
+  source              = "../../modules/backend-vms"
   resource_group_name = data.azurerm_resource_group.main.name
   location            = data.azurerm_resource_group.main.location
 
   # Configuration
-  project_name       = var.project_name
-  environment        = var.environment
-  ssh_public_key     = data.azurerm_key_vault_secret.ssh.value
-  subnet_id          = module.network.subnet_id
-  lb_backend_pool_id = module.network.backend_pool_id
+  project_name          = var.project_name
+  environment           = var.environment
+  ssh_public_key        = data.azurerm_key_vault_secret.ssh.value
+  network_interface_ids = [module.network.app_nic_ids]
+  subnet_id             = module.network.subnet_id
+  vm_count              = 2
 
   depends_on = [module.network]
 }
@@ -71,7 +89,7 @@ module "control-plane" {
   subscription_id       = var.subscription_id
   vmss_name             = module.backend-vmss.vm_name
 
-  depends_on = [module.network, module.backend-vmss]
+  depends_on = [module.network, module.backend-vms]
 }
 
 module "envoy-lb" {

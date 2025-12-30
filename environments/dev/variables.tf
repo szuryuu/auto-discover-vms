@@ -32,3 +32,8 @@ variable "address_space" {
 variable "address_prefixes" {
   type = list(string)
 }
+
+# App
+variable "apps" {
+  type = list(string)
+}

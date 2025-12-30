@@ -32,3 +32,16 @@ variable "dns_record" {
   type    = list(string)
   default = ["10.1.1.4"] # Dummy
 }
+
+variable "vm_count" {
+  type    = number
+  default = 2
+}
+
+locals {
+  app_count_valid = length(var.app_name) == var.vm_count
+}
+
+variable "app_name" {
+  type = list(string)
+}

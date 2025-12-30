@@ -16,6 +16,14 @@ output "control_plane_private_ip" {
   value = azurerm_network_interface.control_plane_nic.private_ip_address
 }
 
+output "app_public_ips" {
+  value = azurerm_public_ip.app_pip[*].ip_address
+}
+
+output "app_private_ips" {
+  value = azurerm_network_interface.app_nic[*].private_ip_address
+}
+
 # Virtual Network (VNet)
 output "vnet_id" {
   value = azurerm_virtual_network.network.id
@@ -32,6 +40,10 @@ output "monitor_nic_id" {
 
 output "control_plane_nic_id" {
   value = azurerm_network_interface.control_plane_nic.id
+}
+
+output "app_nic_ids" {
+  value = azurerm_network_interface.app_nic[*].id
 }
 
 # Load Balancer

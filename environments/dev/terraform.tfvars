@@ -5,9 +5,12 @@ key_vault_name      = "rg-intern-devops"
 
 # Environment
 environment  = "dev"
-project_name = "horizontal-scale-envoyproxy"
+project_name = "auto-discover-vms"
 size         = "Standard_B1s"
 
 # Network
 address_space    = ["10.1.0.0/16"]
 address_prefixes = ["10.1.1.0/24", "10.1.2.0/24"]
+
+# App
+apps = ["app1", "app2"]

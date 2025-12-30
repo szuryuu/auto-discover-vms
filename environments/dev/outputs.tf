@@ -33,9 +33,9 @@ output "envoy_nic_id" {
 # }
 
 # Environment
-output "vm_name" {
-  value = module.backend-vmss.vm_name
-}
+# output "vm_name" {
+#   value = module.backend-vmss.vm_name
+# }
 
 output "environment" {
   value = var.environment

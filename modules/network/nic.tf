@@ -36,3 +36,22 @@ resource "azurerm_network_interface" "control_plane_nic" {
     public_ip_address_id          = azurerm_public_ip.control_plane_pip.id
   }
 }
+
+resource "azurerm_network_interface" "app_nic" {
+  count = var.vm_count
+  name = "${var.project_name}-${var.environment}-vm-${count.index}-nic"
+  resource_group_name = var.resource_group_name
+  location = var.location
+
+  ip_configuration {
+    name = "internal"
+    subnet_id = azurerm_subnet.subnet.id
+    private_ip_address_allocation = "Dynamic"
+  }
+
+  tags = {
+    environment = var.environment
+    project     = var.project_name
+    app         = var.app_name[count.index]
+  }
+}
