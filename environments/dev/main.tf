@@ -51,9 +51,10 @@ module "backend-vms" {
   project_name          = var.project_name
   environment           = var.environment
   ssh_public_key        = data.azurerm_key_vault_secret.ssh.value
-  network_interface_ids = [module.network.app_nic_ids]
+  network_interface_ids = module.network.app_nic_ids
   subnet_id             = module.network.subnet_id
   vm_count              = 2
+  app_name  = var.apps
 
   depends_on = [module.network]
 }

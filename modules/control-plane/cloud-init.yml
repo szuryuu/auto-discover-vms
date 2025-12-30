@@ -10,7 +10,7 @@ write_files:
         # name_pattern: "horizontal-scale-envoyproxy-backend-*"
 
         # Alternative 2
-        # vm_names:
+        vm_names:
           - "auto-discover-vms-app-1"
           - "auto-discover-vms-app-2"
 
