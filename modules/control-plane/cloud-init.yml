@@ -11,8 +11,8 @@ write_files:
 
         # Alternative 2
         vm_names:
+          - "auto-discover-vms-app-0"
           - "auto-discover-vms-app-1"
-          - "auto-discover-vms-app-2"
 
   - path: /opt/control-plane/main.go
     content: |
