@@ -39,5 +39,6 @@ resource "azurerm_public_ip" "app_pip" {
   name                = "${var.project_name}-${var.environment}-app-${count.index}-pip"
   resource_group_name = var.resource_group_name
   location            = var.location
-  allocation_method   = "Static"
+  sku                 = "Basic"
+  allocation_method   = "Dynamic"
 }

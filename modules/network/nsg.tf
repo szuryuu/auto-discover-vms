@@ -52,6 +52,18 @@ resource "azurerm_network_security_group" "nsg" {
   }
 
   security_rule {
+    name                       = "ControlPlaneAPI"
+    priority                   = 140
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "8080"
+    source_address_prefix      = "Internet"
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
     name                       = "AllowVnetInternal"
     priority                   = 150
     direction                  = "Inbound"
