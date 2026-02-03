@@ -65,7 +65,7 @@ The Control Plane exposes a lightweight REST API on port `8080` to provide real-
         "last_update": "2025-02-04T10:05:00Z"
     }   
     ```
-3.  Trigger Discovery
+3.  Trigger Discovery  
     Forces an immediate polling cycle to the Azure API. This is useful for instantly registering new instances after a scaling event, bypassing the default polling interval (30s).
 
     -   **Endpoint:** `/api/discovery/trigger`
