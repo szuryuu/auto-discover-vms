@@ -15,10 +15,20 @@ Implementing a dynamic Service Mesh using Envoy Proxy to automatically discover 
 
 ## Infrastructure
 
-| INFRA | Details |
-| :--- | :--- |
-| **Network** | NSG port 80, 8080, 22 (SSH) |
-| **Compute** | Control Plane Vm (go-control-plane), Envoy LB Vm (envoy proxy), Backend Vm (apps vm) |
+### Compute Layer
+| Component | Type | Description |
+| :--- | :--- | :--- |
+| **Control Plane** | Linux VM (Ubuntu) | Runs the custom Go xDS server. Uses **Azure Managed Identity** (System-Assigned) to securely query the Azure Resource Manager API. |
+| **Envoy Gateway** | Linux VM (Ubuntu) | Runs **Envoy Proxy v1.31** (via Docker). Acts as the primary load balancer, receiving dynamic configuration updates via gRPC. |
+| **Backend Pool** | VM Scale Set / VMs | A dynamic set of Linux VMs hosting the application (Nginx). These instances are ephemeral and automatically discovered upon creation. |
+
+### Networking & Security
+* **Virtual Network (VNet)**: A unified `10.0.0.0/16` network ensures low-latency private communication between the Control Plane, Proxy, and Backends.
+* **Network Security Groups (NSG)**: Configured with strict ingress rules:
+  * `Port 80/443`: Public HTTP/HTTPS traffic.
+  * `Port 8080`: Envoy Traffic & Control Plane API access.
+  * `Port 22`: SSH access for administration.
+* **Internal Load Balancer**: A Standard SKU Azure Load Balancer handles internal traffic distribution and health probing.
 
 ## API Documentation
 
