@@ -22,9 +22,7 @@ Implementing a dynamic Service Mesh using Envoy Proxy to automatically discover 
 
 ## API Documentation
 
-    Control Plane API  
-
-    The Control Plane exposes a lightweight REST API on port `8080` to provide real-time observability into the service discovery process and the health of the mesh.
+The Control Plane exposes a lightweight REST API on port `8080` to provide real-time observability into the service discovery process and the health of the mesh.
 
 1.  List Discovered VMs  
     Retrieves the snapshot of Azure VMs currently discovered by the Control Plane and synchronized with Envoy.
