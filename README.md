@@ -8,7 +8,7 @@ Implementing a dynamic Service Mesh using Envoy Proxy to automatically discover 
 
 -   **Azure Service Discovery**  
     Leverages the Azure SDK for Go to automatically discover backend Virtual Machines based on resource tags and metadata, eliminating the need for manual IP configuration or static lists.
--   **Custom Envoy Control Plane (xDS)**
+-   **Custom Envoy Control Plane (xDS)**  
     Implementing a lightweight Control Plane in Go that provides dynamic configuration directly to the Envoy proxy via the gRPC xDS protocol.
 -   **Seamless Scaling & Observability**  
     Enables zero-downtime scaling by instantly routing traffic to new instances without proxy restarts, paired with a built-in REST API that provides real-time visibility into the discovery status and health of backend nodes.
@@ -22,7 +22,7 @@ Implementing a dynamic Service Mesh using Envoy Proxy to automatically discover 
 
 ## API Documentation
 
-1.  Endpoint    : {IP_ADDR}/api/vms  
+1.  Endpoint    : {ip_addr}/api/vms  
     Method      : GET  
     Description : Returns the list of active Azure VMs currently known to the Control Plane and synchronized with Envoy.  
 
@@ -41,7 +41,7 @@ Implementing a dynamic Service Mesh using Envoy Proxy to automatically discover 
 	    ]
     };
     ```
-2.  Endpoint    : {IP_ADDR}/api/health  
+2.  Endpoint    : {ip_addr}/api/health  
     Method      : GET  
     
     Response Example    :     
@@ -52,7 +52,7 @@ Implementing a dynamic Service Mesh using Envoy Proxy to automatically discover 
         "total_vms": 2
     }
     ```
-3.  Endpoint    : {IP_ADDR}/api/discovery/trigger  
+3.  Endpoint    : {ip_addr}/api/discovery/trigger  
     Method      : POST  
     Description : Useful for forcing an update immediately after scaling events.  
 
