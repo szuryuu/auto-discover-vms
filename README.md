@@ -1,4 +1,4 @@
-# Azure Auto Discover VMs
+# Azure Auto Discover VMS
 
 Implementing a dynamic Service Mesh using Envoy Proxy to automatically discover and load balance Azure Virtual Machine IP addresses via a custom Control Plane.
 
