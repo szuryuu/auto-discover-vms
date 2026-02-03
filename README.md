@@ -22,39 +22,73 @@ Implementing a dynamic Service Mesh using Envoy Proxy to automatically discover 
 
 ## API Documentation
 
-1.  Endpoint    : {ip_addr}/api/vms  
-    Method      : GET  
-    Description : Returns the list of active Azure VMs currently known to the Control Plane and synchronized with Envoy.  
+    Control Plane API  
 
-    Response Example    :  
-    ```JSON
+    The Control Plane exposes a lightweight REST API on port `8080` to provide real-time observability into the service discovery process and the health of the mesh.
+
+1.  List Discovered VMs  
+    Retrieves the snapshot of Azure VMs currently discovered by the Control Plane and synchronized with Envoy.
+
+    -   **Endpoint:** `/api/vms`
+    -   **Method:** `GET`
+
+    **Response Example:**
+    ```json
     {
-	    "last_update": "2025-01-02T10:00:00Z",
-	    "total_vms": 2,
-	    "snapshot_version": 5,
-	    "vms": [
-	    {
-		    "name": "app-vm-0",
-		    "public_ip": "20.1.2.3",
-		    "private_ip": "10.1.1.4"
-	    }
-	    ]
-    };
-    ```
-2.  Endpoint    : {ip_addr}/api/health  
-    Method      : GET  
-    
-    Response Example    :     
-    ```JSON
-    {
-        "status": "healthy",
-        "uptime": 3600,
-        "total_vms": 2
+        "last_update": "2025-02-04T10:00:00Z",
+        "total_vms": 2,
+        "snapshot_version": 15,
+        "vms": [
+            {
+                "name": "auto-discover-vms-app-0",
+                "public_ip": "20.120.10.1",
+                "private_ip": "10.1.1.4"
+            },
+            {
+                "name": "auto-discover-vms-app-1",
+                "public_ip": "20.120.10.2",
+                "private_ip": "10.1.1.5"
+            }
+        ]
     }
     ```
-3.  Endpoint    : {ip_addr}/api/discovery/trigger  
-    Method      : POST  
-    Description : Useful for forcing an update immediately after scaling events.  
+2.  Health Check  
+    Provides the operational status of the Control Plane, including uptime and the last successful discovery timestamp.  
+
+    -   **Endpoint:** `/api/health`
+    -   **Method** `GET`
+
+    **Response Example:**
+    ```json
+    {
+        "status": "healthy",
+        "uptime": 3600.5,
+        "total_vms": 2,
+        "last_update": "2025-02-04T10:05:00Z"
+    }   
+    ```
+3.  Trigger Discovery
+    Forces an immediate polling cycle to the Azure API. This is useful for instantly registering new instances after a scaling event, bypassing the default polling interval (30s).
+
+    -   **Endpoint:** `/api/discovery/trigger`
+    -   **Method:** `POST`
+
+    **Response Example:**  
+    ```json
+    {
+        "message": "Discovery triggered",
+        "note": "Check logs for results"
+    }
+    ```
+
+**Example Usage:**  
+```bash
+# Check system health
+curl -s http://<CONTROL_PLANE_IP>:8080/api/health | jq
+
+# Force a discovery update
+curl -X POST http://<CONTROL_PLANE_IP>:8080/api/discovery/trigger
+```
 
 ## License
 
