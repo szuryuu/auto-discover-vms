@@ -22,9 +22,9 @@ Implementing a dynamic Service Mesh using Envoy Proxy to automatically discover 
 
 ## API Documentation
 
-1.  Endpoint    : {IP_ADDR}/api/vms
-    Method      : GET
-    Description : Returns the list of active Azure VMs currently known to the Control Plane and synchronized with Envoy.
+1.  Endpoint    : {IP_ADDR}/api/vms  
+    Method      : GET  
+    Description : Returns the list of active Azure VMs currently known to the Control Plane and synchronized with Envoy.  
 
     Response Example    :  
     ```JSON
@@ -41,10 +41,10 @@ Implementing a dynamic Service Mesh using Envoy Proxy to automatically discover 
 	    ]
     };
     ```
-2.  Endpoint    : {IP_ADDR}/api/health
-    Method      : GET
+2.  Endpoint    : {IP_ADDR}/api/health  
+    Method      : GET  
     
-    Response Example    :   
+    Response Example    :     
     ```JSON
     {
         "status": "healthy",
@@ -52,9 +52,9 @@ Implementing a dynamic Service Mesh using Envoy Proxy to automatically discover 
         "total_vms": 2
     }
     ```
-3.  Endpoint    : {IP_ADDR}/api/discovery/trigger
-    Method      : POST
-    Description : Useful for forcing an update immediately after scaling events.
+3.  Endpoint    : {IP_ADDR}/api/discovery/trigger  
+    Method      : POST  
+    Description : Useful for forcing an update immediately after scaling events.  
 
 ## License
 
